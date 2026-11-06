@@ -1,0 +1,22 @@
+{
+  "name": "zotero-citations-sync",
+  "version": "0.1.0",
+  "description": "Keeps Obsidian Citations literature notes in sync with your Zotero PDF annotations and notes.",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+    "install-local": "node scripts/install-local.mjs"
+  },
+  "keywords": ["obsidian", "zotero", "citations", "annotations"],
+  "author": "Avery",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "builtin-modules": "^4.0.0",
+    "esbuild": "^0.24.0",
+    "obsidian": "latest",
+    "tslib": "^2.6.0",
+    "typescript": "^5.6.0"
+  }
+}

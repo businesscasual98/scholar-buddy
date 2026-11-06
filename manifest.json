@@ -1,0 +1,10 @@
+{
+  "id": "zotero-citations-sync",
+  "name": "Zotero Citations Sync",
+  "version": "0.1.0",
+  "minAppVersion": "1.4.0",
+  "description": "Keeps your Citations literature notes in sync with your Zotero PDF highlights and notes. Zero config with Better BibTeX.",
+  "author": "Avery",
+  "authorUrl": "https://github.com/avery",
+  "isDesktopOnly": true
+}
