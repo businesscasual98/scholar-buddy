@@ -1,14 +1,9 @@
-import { Notice, Plugin, TAbstractFile, TFile, normalizePath } from "obsidian";
+import { Notice, Plugin, TAbstractFile, TFile, debounce, normalizePath } from "obsidian";
 import { DEFAULT_SETTINGS, ZoteroSyncSettingTab, ZoteroSyncSettings } from "./settings";
 import { LocalApiDisabledError, ZoteroClient, ZoteroUnavailableError } from "./zotero";
 import { NoteTarget, syncKindle, syncLibrary } from "./sync";
-
-/** What we borrow from the Citations plugin's settings, when it's installed. */
-export interface CitationsDefaults {
-  folder: string;
-  titleTemplate: string;
-  contentTemplate: string;
-}
+import { BibLibrary } from "./library";
+import { registerCitationCommands } from "./citations";
 
 const FALLBACK_CONTENT_TEMPLATE =
   "---\ncitekey: {{citekey}}\ntitle: {{title}}\nauthors: {{authorString}}\nyear: {{year}}\n---\n";
@@ -17,7 +12,7 @@ type Reason = "manual" | "startup" | "poll" | "file";
 
 export default class ZoteroCitationsSyncPlugin extends Plugin {
   settings: ZoteroSyncSettings = DEFAULT_SETTINGS;
-  citationsDefaults: CitationsDefaults | null = null;
+  library: BibLibrary = new BibLibrary(this.app, () => this.bibPath());
 
   private statusEl: HTMLElement | null = null;
   private pollHandle: number | null = null;
@@ -26,7 +21,17 @@ export default class ZoteroCitationsSyncPlugin extends Plugin {
 
   async onload(): Promise<void> {
     await this.loadSettings();
+    await this.importCitationsSettings();
     this.addSettingTab(new ZoteroSyncSettingTab(this.app, this));
+    registerCitationCommands(this);
+
+    // Better BibTeX rewrites the whole export, so wait for it to settle before re-reading.
+    const reloadLibrary = debounce(() => void this.library.refresh(), 1000, true);
+    this.registerEvent(
+      this.app.vault.on("modify", (f: TAbstractFile) => {
+        if (f.path === normalizePath(this.bibPath())) reloadLibrary();
+      })
+    );
 
     this.addRibbonIcon("refresh-cw", "Sync Zotero annotations", () => void this.runSync("manual"));
     this.addCommand({
@@ -52,7 +57,7 @@ export default class ZoteroCitationsSyncPlugin extends Plugin {
 
     this.app.workspace.onLayoutReady(() => {
       void (async () => {
-        await this.loadCitationsDefaults();
+        void this.library.refresh();
         if (this.settings.syncOnStartup) {
           await this.runSync("startup");
           await this.runKindleSync("startup");
@@ -168,26 +173,40 @@ export default class ZoteroCitationsSyncPlugin extends Plugin {
   }
 
   // ------------------------------------------------------------- config
-  private noteTarget(): NoteTarget {
-    const c = this.citationsDefaults;
+  noteTarget(): NoteTarget {
     return {
-      folder: this.settings.notesFolder || c?.folder || "",
-      titleTemplate: this.settings.noteNameTemplate || c?.titleTemplate || "@{{citekey}}",
-      contentTemplate: c?.contentTemplate || FALLBACK_CONTENT_TEMPLATE,
+      folder: this.settings.notesFolder,
+      titleTemplate: this.settings.noteNameTemplate || "@{{citekey}}",
+      contentTemplate: this.settings.contentTemplate || FALLBACK_CONTENT_TEMPLATE,
     };
   }
 
-  /** Read the Citations plugin's data.json so notes land where it expects them. */
-  private async loadCitationsDefaults(): Promise<void> {
+  /** The configured .bib file, or the vault's only .bib file if none is set. */
+  bibPath(): string {
+    if (this.settings.bibPath) return this.settings.bibPath;
+    const found = this.app.vault.getFiles().filter((f) => f.extension === "bib");
+    return found.length === 1 ? found[0].path : "";
+  }
+
+  /**
+   * Copy the Citations plugin's settings once, filling only what's unset, so this plugin keeps
+   * working the same after Citations is turned off or removed.
+   */
+  private async importCitationsSettings(): Promise<void> {
+    if (this.settings.citationsImported) return;
     const path = normalizePath(`${this.app.vault.configDir}/plugins/obsidian-citation-plugin/data.json`);
     try {
       if (!(await this.app.vault.adapter.exists(path))) return;
       const raw = JSON.parse(await this.app.vault.adapter.read(path)) as Record<string, string>;
-      this.citationsDefaults = {
-        folder: raw.literatureNoteFolder ?? "",
-        titleTemplate: raw.literatureNoteTitleTemplate ?? "@{{citekey}}",
-        contentTemplate: raw.literatureNoteContentTemplate ?? FALLBACK_CONTENT_TEMPLATE,
-      };
+      const s = this.settings;
+      s.notesFolder ||= raw.literatureNoteFolder ?? "";
+      s.noteNameTemplate ||= raw.literatureNoteTitleTemplate ?? "";
+      s.contentTemplate ||= raw.literatureNoteContentTemplate ?? "";
+      s.citationTemplate ||= raw.markdownCitationTemplate ?? "";
+      s.alternativeCitationTemplate ||= raw.alternativeMarkdownCitationTemplate ?? "";
+      if (raw.citationExportFormat !== "csl-json") s.bibPath ||= raw.citationExportPath ?? "";
+      s.citationsImported = true;
+      await this.saveSettings();
     } catch (e) {
       console.warn("Zotero Citations Sync: could not read Citations plugin settings", e);
     }

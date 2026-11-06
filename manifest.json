@@ -1,9 +1,9 @@
 {
   "id": "zotero-citations-sync",
   "name": "Zotero Citations Sync",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "minAppVersion": "1.4.0",
-  "description": "Keeps your Citations literature notes in sync with your Zotero PDF highlights and notes. Zero config with Better BibTeX.",
+  "description": "Search your Zotero library, insert citations, and keep literature notes in sync with your PDF highlights and notes. Works with Better BibTeX.",
   "author": "Avery",
   "authorUrl": "https://github.com/avery",
   "isDesktopOnly": true

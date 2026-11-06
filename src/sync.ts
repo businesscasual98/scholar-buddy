@@ -299,7 +299,7 @@ async function writeBlock(app: App, path: string, block: string, markers: Marker
   return { created: true };
 }
 
-function notePath(target: NoteTarget, fileName: string): string {
+export function notePath(target: NoteTarget, fileName: string): string {
   const safe = fileName.replace(UNSAFE, "_").trim() + ".md";
   return normalizePath(target.folder ? `${target.folder}/${safe}` : safe);
 }

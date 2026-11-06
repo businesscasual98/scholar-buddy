@@ -10,5 +10,5 @@ if (!vault || !existsSync(join(vault, ".obsidian"))) {
 }
 const dest = join(vault, ".obsidian", "plugins", "zotero-citations-sync");
 mkdirSync(dest, { recursive: true });
-for (const f of ["main.js", "manifest.json"]) cpSync(f, join(dest, f));
+for (const f of ["main.js", "manifest.json", "styles.css"]) cpSync(f, join(dest, f));
 console.log("installed to", dest);

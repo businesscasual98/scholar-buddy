@@ -1,12 +1,13 @@
 {
   "name": "zotero-citations-sync",
-  "version": "0.1.0",
-  "description": "Keeps Obsidian Citations literature notes in sync with your Zotero PDF annotations and notes.",
+  "version": "0.2.0",
+  "description": "Search your Zotero library from Obsidian, insert citations, and keep literature notes in sync with your PDF annotations and notes.",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
-    "install-local": "node scripts/install-local.mjs"
+    "install-local": "node scripts/install-local.mjs",
+    "test": "esbuild scripts/bib.test.ts --bundle --platform=node --log-level=warning --outfile=scripts/bib.test.js && node scripts/bib.test.js"
   },
   "keywords": ["obsidian", "zotero", "citations", "annotations"],
   "author": "Avery",

@@ -4,10 +4,18 @@ import type ZoteroCitationsSyncPlugin from "./main";
 export interface ZoteroSyncSettings {
   /** Port of Zotero's built-in HTTP server. */
   zoteroPort: number;
-  /** Folder for literature notes. Empty = use the Citations plugin's setting. */
+  /** Folder for literature notes. Empty = the vault root. */
   notesFolder: string;
-  /** Filename template. Empty = use the Citations plugin's setting (default "@{{citekey}}"). */
+  /** Filename template. Empty = "@{{citekey}}". */
   noteNameTemplate: string;
+  /** Initial content of a new literature note. Empty = a basic frontmatter template. */
+  contentTemplate: string;
+  /** Better BibTeX export: vault-relative or absolute. Empty = the vault's only .bib file. */
+  bibPath: string;
+  /** What "Insert citation" writes. Empty = "[@{{citekey}}]". */
+  citationTemplate: string;
+  /** What "Insert citation" writes with Shift+Enter. Empty = "@{{citekey}}". */
+  alternativeCitationTemplate: string;
   /** Create a literature note for items that have annotations but no note yet. */
   createMissingNotes: boolean;
   /** Also sync Zotero child notes (not just PDF annotations). */
@@ -28,6 +36,7 @@ export interface ZoteroSyncSettings {
   kindleOverrides: string;
 
   // --- state, not shown in the UI
+  citationsImported: boolean;
   lastLibraryVersion: number;
   citekeyCache: Record<string, string>;
   kindleMatchCache: Record<string, string>;
@@ -39,6 +48,10 @@ export const DEFAULT_SETTINGS: ZoteroSyncSettings = {
   zoteroPort: 23119,
   notesFolder: "",
   noteNameTemplate: "",
+  contentTemplate: "",
+  bibPath: "",
+  citationTemplate: "",
+  alternativeCitationTemplate: "",
   createMissingNotes: true,
   includeChildNotes: true,
   syncOnStartup: true,
@@ -48,6 +61,7 @@ export const DEFAULT_SETTINGS: ZoteroSyncSettings = {
   kindleClippingsPath: "My Clippings.txt",
   kindleHeading: "## Kindle highlights",
   kindleOverrides: "",
+  citationsImported: false,
   lastLibraryVersion: 0,
   citekeyCache: {},
   kindleMatchCache: {},
@@ -105,13 +119,7 @@ export class ZoteroSyncSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Literature note folder")
-      .setDesc(
-        `Leave empty to use the Citations plugin's folder${
-          this.plugin.citationsDefaults?.folder
-            ? ` (currently "${this.plugin.citationsDefaults.folder}")`
-            : ""
-        }.`
-      )
+      .setDesc("Leave empty to use the vault's top level.")
       .addText((t) =>
         t
           .setPlaceholder("Reading notes")
@@ -124,13 +132,7 @@ export class ZoteroSyncSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Note name template")
-      .setDesc(
-        `Leave empty to use the Citations plugin's template${
-          this.plugin.citationsDefaults?.titleTemplate
-            ? ` (currently "${this.plugin.citationsDefaults.titleTemplate}")`
-            : ""
-        }. Supports {{citekey}}, {{title}}, {{year}}, {{authorString}}.`
-      )
+      .setDesc("Supports {{citekey}}, {{title}}, {{year}}, {{authorString}}.")
       .addText((t) =>
         t
           .setPlaceholder("@{{citekey}}")
@@ -140,6 +142,76 @@ export class ZoteroSyncSettingTab extends PluginSettingTab {
             await save();
           })
       );
+
+    new Setting(containerEl)
+      .setName("New note content")
+      .setDesc(
+        "What a new literature note starts with. Variables: {{citekey}}, {{title}}, {{titleShort}}, {{authorString}}, {{year}}, {{abstract}}, {{containerTitle}}, {{DOI}}, {{URL}}, {{publisher}}, {{publisherPlace}}, {{page}}, {{note}}, {{zoteroSelectURI}}. Notes created from a Zotero sync have only citekey, title, year and authorString."
+      )
+      .addTextArea((t) =>
+        t.setValue(s.contentTemplate).onChange(async (v) => {
+          s.contentTemplate = v;
+          await save();
+        })
+      );
+
+    new Setting(containerEl).setName("Citations").setHeading();
+
+    const libraryStatus = new Setting(containerEl).setName("Library");
+    const showLibraryStatus = () => {
+      const { entries, lastProblem } = this.plugin.library;
+      libraryStatus.setDesc(lastProblem ?? `${entries.size} references loaded from "${this.plugin.bibPath()}".`);
+    };
+    libraryStatus.addButton((b) =>
+      b.setButtonText("Reload").onClick(async () => {
+        await this.plugin.library.refresh(true);
+        showLibraryStatus();
+      })
+    );
+    void this.plugin.library.refresh().then(showLibraryStatus);
+
+    new Setting(containerEl)
+      .setName(".bib file")
+      .setDesc("Your Better BibTeX export, with \"Keep updated\" on. Leave empty to use the vault's only .bib file.")
+      .addText((t) =>
+        t
+          .setPlaceholder("Library.bib")
+          .setValue(s.bibPath)
+          .onChange(async (v) => {
+            s.bibPath = v.trim();
+            await save();
+            await this.plugin.library.refresh(true);
+            showLibraryStatus();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Citation format")
+      .setDesc("What \"Insert citation\" writes. Takes the same variables as new note content.")
+      .addText((t) =>
+        t
+          .setPlaceholder("[@{{citekey}}]")
+          .setValue(s.citationTemplate)
+          .onChange(async (v) => {
+            s.citationTemplate = v;
+            await save();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Secondary citation format")
+      .setDesc("What \"Insert citation\" writes when you press Shift+Enter.")
+      .addText((t) =>
+        t
+          .setPlaceholder("@{{citekey}}")
+          .setValue(s.alternativeCitationTemplate)
+          .onChange(async (v) => {
+            s.alternativeCitationTemplate = v;
+            await save();
+          })
+      );
+
+    new Setting(containerEl).setName("Literature notes").setHeading();
 
     new Setting(containerEl)
       .setName("Create notes for items that don't have one yet")

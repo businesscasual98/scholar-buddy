@@ -1,0 +1,26 @@
+.zcs-search .zcs-result {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.zcs-search .zcs-title {
+  font-weight: var(--font-medium);
+  overflow-wrap: anywhere;
+}
+
+.zcs-search .zcs-meta,
+.zcs-search .zcs-citekey {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  overflow-wrap: anywhere;
+}
+
+.zcs-search .zcs-year {
+  margin-left: 8px;
+}
+
+.zcs-search .zcs-citekey {
+  font-family: var(--font-monospace);
+}

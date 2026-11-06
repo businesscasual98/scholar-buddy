@@ -4,7 +4,7 @@
 
 Highlight a PDF in Zotero → the quote appears in that paper's note in Obsidian, with a link that jumps back to the exact spot in the PDF. No export step, no templates to configure, and your own writing in the note is never touched.
 
-Built as a companion to the [Citations](https://github.com/hans/obsidian-citation-plugin) plugin: it writes into the same `@citekey` notes Citations creates, in the same folder, using the same Better BibTeX citekeys. Install it, and it just works.
+It also searches your library and inserts citations, and can replace the [Citations](https://github.com/hans/obsidian-citation-plugin) plugin outright: it uses the same `@citekey` notes, folder and Better BibTeX citekeys, and copies your Citations settings the first time it runs.
 
 ```
 ---
@@ -30,6 +30,7 @@ this in my role with the [[defense]] sector.                                   �
 
 ## What it does
 
+- **Searches your library.** `Open literature note`, `Insert literature note link`, `Insert literature note content` and `Insert citation` search your Better BibTeX `.bib` export, so they work even when Zotero is closed. See [Citations](#citations).
 - **Syncs on its own.** Runs when Obsidian opens, then watches Zotero for changes (one tiny request every 30 s — a real sync only happens when something changed). There's also a ribbon button and a `Sync annotations from Zotero now` command.
 - **Keeps your writing safe.** Everything from Zotero lives between two `%% zotero-sync %%` markers (invisible in reading view). Anything outside them is yours and is never modified. Delete the block and it'll be re-added; edit inside it and your edits will be overwritten next sync — Zotero is the source of truth there.
 - **…except your wikilinks.** Wrap a word or phrase in a quote with `[[brackets]]` (or `[[Target|alias]]`) and it survives every sync. The plugin finds the same text in the freshly rendered quote and re-links it. If the highlight is deleted in Zotero, the link goes with it.
@@ -46,7 +47,7 @@ this in my role with the [[defense]] sector.                                   �
 | **Zotero 7 or newer** running on the same computer | The plugin talks to Zotero directly, so Zotero needs to be open for a sync to happen. Close it and the plugin waits patiently. |
 | **Zotero's local API enabled** | In Zotero: *Edit → Settings → Advanced → Miscellaneous* → tick **Enable local API**. One-time. |
 | **[Better BibTeX](https://retorque.re/zotero-better-bibtex/)** | Provides the citekeys that name your notes. |
-| **[Citations](https://github.com/hans/obsidian-citation-plugin)** *(recommended)* | The folder and note-name template are read from it automatically. Without it, notes go to the folder you set, named `@{{citekey}}`. |
+| **A Better BibTeX `.bib` export** *(for search and citations)* | In Zotero: *File → Export Library* → **Better BibLaTeX** or **Better BibTeX** → tick **Keep updated**, and save it in your vault. Annotation sync doesn't need it. |
 
 Desktop only (Zotero doesn't run on phones).
 
@@ -54,7 +55,21 @@ Desktop only (Zotero doesn't run on phones).
 
 **From the community plugin list** *(once published)*: Settings → Community plugins → Browse → "Zotero Citations Sync".
 
-**Manually**: download `main.js` and `manifest.json` from the latest release into `<vault>/.obsidian/plugins/zotero-citations-sync/`, then enable the plugin in Settings → Community plugins.
+**Manually**: download `main.js`, `manifest.json` and `styles.css` from the latest release into `<vault>/.obsidian/plugins/zotero-citations-sync/`, then enable the plugin in Settings → Community plugins.
+
+## Citations
+
+| Command | Hotkey | In the search window |
+|---|---|---|
+| Open literature note | `Ctrl/Cmd+Shift+O` | `Enter` opens the note (creating it if needed), `Ctrl+Enter` opens it in a new pane, `Tab` shows the item in Zotero, `Shift+Tab` opens the PDF |
+| Insert literature note link | `Ctrl/Cmd+Shift+E` | `Enter` inserts a link, creating the note if needed |
+| Insert literature note content | | `Enter` inserts the new-note template, filled in for that reference |
+| Insert citation | | `Enter` inserts the citation format, `Shift+Enter` the secondary format |
+| Refresh citation library | `Ctrl/Cmd+Shift+R` | Reloads the `.bib` file; it also reloads by itself when the file changes |
+
+**Moving from the Citations plugin:** your existing notes and links keep working, because note names don't change. Your settings are copied on first run. While Citations stays enabled, the commands above have no hotkeys, so the two don't both fire. Once you turn it off and reload Obsidian, the hotkeys apply.
+
+Templates support plain `{{variable}}` substitution, not the Handlebars helpers and `{{#if}}` blocks Citations allows. CSL-JSON exports aren't supported. Export BibLaTeX or BibTeX instead.
 
 ## Settings
 
@@ -62,8 +77,11 @@ Desktop only (Zotero doesn't run on phones).
 |---|---|---|
 | Sync when Obsidian opens | on | |
 | Watch Zotero for changes | 30 s | How often to ask Zotero "anything new?". `0` turns it off. |
-| Literature note folder | *(from Citations)* | |
-| Note name template | *(from Citations)* | Supports `{{citekey}}`, `{{title}}`, `{{year}}`, `{{authorString}}`. |
+| Literature note folder | *(copied from Citations)* | |
+| Note name template | *(copied from Citations)* | Supports `{{citekey}}`, `{{title}}`, `{{year}}`, `{{authorString}}`. |
+| New note content | *(copied from Citations)* | |
+| .bib file | *(copied from Citations, or the vault's only `.bib`)* | Vault-relative or absolute path. |
+| Citation format / secondary format | `[@{{citekey}}]` / `@{{citekey}}` | |
 | Create notes for items that don't have one yet | on | Off = only update existing notes. |
 | Include Zotero child notes | on | |
 | Block heading | `## Zotero annotations` | |
