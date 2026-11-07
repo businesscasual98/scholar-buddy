@@ -1,6 +1,6 @@
 import { promises as fs } from "fs";
 import { isAbsolute } from "path";
-import { App, normalizePath } from "obsidian";
+import { App, TFile, normalizePath } from "obsidian";
 import { BibEntry, parseBib } from "./bib";
 
 /**
@@ -55,17 +55,20 @@ export class BibLibrary {
         ? `${errors.length} entries in "${path}" could not be read (first: ${errors[0]}).`
         : null
       : `"${path}" has no BibTeX entries.`;
-    if (errors.length) console.warn("Zotero Citations Sync: .bib problems", errors);
+  }
+
+  private vaultFile(path: string): TFile {
+    const file = this.app.vault.getFileByPath(normalizePath(path));
+    if (!file) throw new Error("file not found");
+    return file;
   }
 
   private async statMtime(path: string): Promise<number> {
     if (isAbsolute(path)) return (await fs.stat(path)).mtimeMs;
-    const stat = await this.app.vault.adapter.stat(normalizePath(path));
-    if (!stat) throw new Error("file not found");
-    return stat.mtime;
+    return this.vaultFile(path).stat.mtime;
   }
 
   private read(path: string): Promise<string> {
-    return isAbsolute(path) ? fs.readFile(path, "utf8") : this.app.vault.adapter.read(normalizePath(path));
+    return isAbsolute(path) ? fs.readFile(path, "utf8") : this.app.vault.read(this.vaultFile(path));
   }
 }

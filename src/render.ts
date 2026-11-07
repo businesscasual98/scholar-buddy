@@ -36,6 +36,44 @@ export function fillTemplate(template: string, vars: Record<string, string>): st
   return template.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, name: string) => vars[name] ?? "");
 }
 
+/** Quote a frontmatter value when YAML would otherwise misread it, such as a title with a colon. */
+export function yamlValue(value: string): string {
+  if (!value) return "";
+  const plainIsSafe =
+    !/^[\s!&*\-?|>'"%@`{}[\],#:=~]/.test(value) &&
+    !/\s$/.test(value) &&
+    !/:(\s|$)/.test(value) &&
+    !/\s#/.test(value) &&
+    !/[\r\n]/.test(value) &&
+    !/^(true|false|null|yes|no|on|off)$/i.test(value);
+  return plainIsSafe ? value : JSON.stringify(value);
+}
+
+/** Like fillTemplate, but values substituted into a leading frontmatter block stay valid YAML. */
+export function fillNoteTemplate(template: string, vars: Record<string, string>): string {
+  const lines = template.split("\n");
+  let inFrontmatter = lines[0].trim() === "---";
+  return lines
+    .map((line, i) => {
+      if (i === 0 || !inFrontmatter) return fillTemplate(line, vars);
+      if (line.trim() === "---") {
+        inFrontmatter = false;
+        return line;
+      }
+      const m = /^(\s*[^\s:#][^:#]*:[ \t]*)(.*\{\{.*)$/.exec(line);
+      if (!m) return fillTemplate(line, vars);
+      const [, key, value] = m;
+      const quoted = /^(["'])(.*)\1\s*$/.exec(value);
+      if (!quoted) return key + yamlValue(fillTemplate(value, vars));
+      const escaped: Record<string, string> = {};
+      for (const [k, v] of Object.entries(vars)) {
+        escaped[k] = quoted[1] === '"' ? JSON.stringify(v).slice(1, -1) : v.replace(/'/g, "''");
+      }
+      return key + fillTemplate(value, escaped);
+    })
+    .join("\n");
+}
+
 export function authorString(creators: ZoteroItemData["creators"]): string {
   return (creators ?? [])
     .map((c) => c.name ?? [c.firstName, c.lastName].filter(Boolean).join(" "))
@@ -59,9 +97,9 @@ function htmlToMarkdown(html: string): string {
     .replace(/<(b|strong)>([\s\S]*?)<\/\1>/gi, "**$2**")
     .replace(/<(i|em)>([\s\S]*?)<\/\1>/gi, "*$2*")
     .replace(/<[^>]+>/g, "");
-  const el = document.createElement("textarea");
-  el.innerHTML = s; // decode entities; textarea never executes markup
-  return el.value.replace(/\n{3,}/g, "\n\n").trim();
+  // Decodes entities. A parsed document that's never attached can't load or run anything.
+  const decoded = new DOMParser().parseFromString(s, "text/html").documentElement.textContent ?? "";
+  return decoded.replace(/\n{3,}/g, "\n\n").trim();
 }
 
 function renderAnnotation(a: ZoteroItemData): string {

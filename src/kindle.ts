@@ -41,9 +41,9 @@ const META_RE =
 export function parseClippings(raw: string): KindleBook[] {
   const clippings: Clipping[] = [];
   for (const entry of raw.split(/^==========\r?$/m)) {
-    const lines = entry.replace(/^﻿/, "").trim().split(/\r?\n/);
+    const lines = entry.replace(/^\uFEFF/, "").trim().split(/\r?\n/);
     if (lines.length < 2) continue;
-    const rawTitle = lines[0].replace(/﻿/g, "").trim();
+    const rawTitle = lines[0].replace(/\uFEFF/g, "").trim();
     const m = lines[1].trim().match(META_RE);
     if (!m) continue;
     const [, kind, page, ls, le, added] = m;

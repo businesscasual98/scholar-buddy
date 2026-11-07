@@ -1,6 +1,7 @@
 // Unit tests for the .bib reader:  npm test
 import { strict as assert } from "assert";
 import { decodeLatex, entryVars, parseBib, parseNames, sentenceCase } from "../src/bib";
+import { fillNoteTemplate, fillTemplate, yamlValue } from "../src/render";
 
 const one = (src: string) => {
   const { entries, errors } = parseBib(src);
@@ -75,5 +76,21 @@ const v = entryVars(e);
 assert.equal(v.citekey, "delamont*Four2005");
 assert.equal(v.authorString, "Sara Delamont, Paul Atkinson");
 assert.equal(v.publisher, undefined);
+
+// Frontmatter stays valid YAML whatever the values contain
+const T = "---\ntitle: {{title}}\nauthors: {{authorString}}\nkey: \"{{citekey}}\"\nyear: {{year}}\n---\n\n{{title}}\n";
+assert.equal(
+  fillNoteTemplate(T, { title: "Plain title", authorString: "", citekey: "a", year: "2020" }),
+  '---\ntitle: Plain title\nauthors: \nkey: "a"\nyear: 2020\n---\n\nPlain title\n'
+);
+assert.equal(
+  fillNoteTemplate(T, { title: "War: A History", authorString: "@x", citekey: 'q"r', year: "" }),
+  '---\ntitle: "War: A History"\nauthors: "@x"\nkey: "q\\"r"\nyear: \n---\n\nWar: A History\n'
+);
+assert.equal(yamlValue("Line one\nline two"), '"Line one\\nline two"');
+assert.equal(yamlValue("Issue#1 matters"), "Issue#1 matters");
+assert.equal(yamlValue("Why #1 matters"), '"Why #1 matters"');
+assert.equal(yamlValue("true"), '"true"');
+assert.equal(fillTemplate("[@{{citekey}}] {{missing}}", { citekey: "a: b" }), "[@a: b] ");
 
 console.log("bib tests passed");

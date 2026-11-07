@@ -1,10 +1,10 @@
 {
-  "id": "zotero-citations-sync",
-  "name": "Zotero Citations Sync",
-  "version": "0.2.0",
-  "minAppVersion": "1.4.0",
-  "description": "Search your Zotero library, insert citations, and keep literature notes in sync with your PDF highlights and notes. Works with Better BibTeX.",
+  "id": "scholar-buddy",
+  "name": "Scholar Buddy",
+  "version": "0.3.0",
+  "minAppVersion": "1.15.0",
+  "description": "Search your Zotero library, insert citations, and sync PDF highlights, notes, and Kindle clippings into your literature notes.",
   "author": "Avery",
-  "authorUrl": "https://github.com/avery",
+  "authorUrl": "https://github.com/businesscasual98",
   "isDesktopOnly": true
 }

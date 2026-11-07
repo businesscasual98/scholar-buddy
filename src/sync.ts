@@ -6,10 +6,12 @@ import {
   ZOTERO_MARKERS,
   assembleBlock,
   authorString,
+  fillNoteTemplate,
   fillTemplate,
   mergeBlock,
   renderZoteroBlock,
   templateVars,
+  yamlValue,
 } from "./render";
 import {
   KindleBook,
@@ -125,7 +127,7 @@ export async function syncLibrary(
     const vars = templateVars(item, citekey);
     const path = notePath(target, fillTemplate(target.titleTemplate, vars));
     const block = renderZoteroBlock(item, settings.blockHeading);
-    const head = settings.createMissingNotes ? fillTemplate(target.contentTemplate, vars) : null;
+    const head = settings.createMissingNotes ? fillNoteTemplate(target.contentTemplate, vars) : null;
     tally(result, await writeBlock(app, path, block, ZOTERO_MARKERS, head));
   }
 
@@ -197,12 +199,12 @@ export async function syncKindle(
       result.matched++;
       const vars = { citekey, title: book.title, authorString: book.author, year: "" };
       path = notePath(target, fillTemplate(target.titleTemplate, vars));
-      head = fillTemplate(target.contentTemplate, vars);
+      head = fillNoteTemplate(target.contentTemplate, vars);
     } else {
       // Not in Zotero: keep the highlights anyway, in a note named after the book.
       result.unmatched.push(book.rawTitle);
       path = notePath(target, book.title);
-      head = `---\ntitle: ${book.title}\nauthors: ${book.author}\nsource: kindle\n---\n`;
+      head = `---\ntitle: ${yamlValue(book.title)}\nauthors: ${yamlValue(book.author)}\nsource: kindle\n---\n`;
     }
 
     const block = assembleBlock(KINDLE_MARKERS, settings.kindleHeading, renderKindleEntries(book));
@@ -229,7 +231,7 @@ async function trashIfUntouched(app: App, path: string, markers: Markers): Promi
     .replace(/^---\n[\s\S]*?\n---\n?/, "")
     .replace(new RegExp(escapeRe(markers.start) + "[\\s\\S]*?" + escapeRe(markers.end)), "")
     .trim();
-  if (rest === "") await app.vault.trash(f, true);
+  if (rest === "") await app.fileManager.trashFile(f);
 }
 
 function escapeRe(s: string): string {
@@ -286,10 +288,10 @@ interface WriteOutcome {
 async function writeBlock(app: App, path: string, block: string, markers: Markers, head: string | null): Promise<WriteOutcome> {
   const existing = app.vault.getAbstractFileByPath(path);
   if (existing instanceof TFile) {
+    // Compare first so an unchanged note is never rewritten, which file-sync tools would notice.
     const old = await app.vault.read(existing);
-    const next = mergeBlock(old, block, markers);
-    if (next === old) return { unchanged: true };
-    await app.vault.modify(existing, next);
+    if (mergeBlock(old, block, markers) === old) return { unchanged: true };
+    await app.vault.process(existing, (current) => mergeBlock(current, block, markers));
     return { updated: true };
   }
   if (head === null) return {};

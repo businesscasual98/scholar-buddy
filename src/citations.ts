@@ -1,8 +1,9 @@
+import { shell } from "electron";
 import { App, Editor, FuzzyMatch, FuzzySuggestModal, Modifier, Notice, TFile, normalizePath, renderMatches } from "obsidian";
 import { BibEntry, entryVars } from "./bib";
-import { fillTemplate } from "./render";
+import { fillNoteTemplate, fillTemplate } from "./render";
 import { notePath } from "./sync";
-import type ZoteroCitationsSyncPlugin from "./main";
+import type ScholarBuddyPlugin from "./main";
 
 type Choose = (entry: BibEntry, evt: MouseEvent | KeyboardEvent) => void;
 
@@ -20,12 +21,10 @@ class CitationSearchModal extends FuzzySuggestModal<BibEntry> {
     this.limit = 50;
     this.setPlaceholder("Search by title, author, year or citekey");
     this.setInstructions(options.instructions.map(([command, purpose]) => ({ command, purpose })));
-    this.modalEl.addClass("zcs-search");
+    this.modalEl.addClass("scholar-buddy-search");
     for (const [modifiers, key] of options.keys) {
       this.scope.register(modifiers, key, (evt) => {
-        // Obsidian binds only plain Enter. `chooser` isn't in its public types, though
-        // SuggestModal has always used it to pick the highlighted result.
-        (this as unknown as { chooser: { useSelectedItem(e: KeyboardEvent): void } }).chooser.useSelectedItem(evt);
+        this.selectActiveSuggestion(evt);
         return false;
       });
     }
@@ -46,7 +45,7 @@ class CitationSearchModal extends FuzzySuggestModal<BibEntry> {
   renderSuggestion(match: FuzzyMatch<BibEntry>, el: HTMLElement): void {
     el.empty();
     const e = match.item;
-    const row = el.createDiv({ cls: "zcs-result" });
+    const row = el.createDiv({ cls: "scholar-buddy-result" });
     const parts = [e.title, e.authorString, e.year, e.id].filter(Boolean) as string[];
     // Highlights index into getItemText, so each piece shifts them to its own offset.
     const within = (text: string | undefined): [number, number][] => {
@@ -56,82 +55,85 @@ class CitationSearchModal extends FuzzySuggestModal<BibEntry> {
         .map(([a, b]): [number, number] => [a - start, Math.min(b - start, text.length)])
         .filter(([a, b]) => a >= 0 && a < b);
     };
-    renderMatches(row.createDiv({ cls: "zcs-title" }), e.title || e.id, within(e.title));
-    const meta = row.createDiv({ cls: "zcs-meta" });
-    if (e.authorString) renderMatches(meta.createSpan({ cls: "zcs-authors" }), e.authorString, within(e.authorString));
-    if (e.year) meta.createSpan({ cls: "zcs-year", text: e.year });
-    row.createDiv({ cls: "zcs-citekey", text: e.id });
+    renderMatches(row.createDiv({ cls: "scholar-buddy-title" }), e.title || e.id, within(e.title));
+    const meta = row.createDiv({ cls: "scholar-buddy-meta" });
+    if (e.authorString) renderMatches(meta.createSpan({ cls: "scholar-buddy-authors" }), e.authorString, within(e.authorString));
+    if (e.year) meta.createSpan({ cls: "scholar-buddy-year", text: e.year });
+    row.createDiv({ cls: "scholar-buddy-citekey", text: e.id });
   }
 }
 
-/** Find the entry's note regardless of case, as the Citations plugin does, or create it. */
-export async function getOrCreateNote(plugin: ZoteroCitationsSyncPlugin, entry: BibEntry): Promise<TFile> {
+/** Find the entry's note, or create it. A note differing only by letter case counts as the same note. */
+export async function getOrCreateNote(plugin: ScholarBuddyPlugin, entry: BibEntry): Promise<TFile> {
   const { app } = plugin;
   const target = plugin.noteTarget();
   const vars = entryVars(entry);
   const path = notePath(target, fillTemplate(target.titleTemplate, vars));
-  const existing = app.vault.getAbstractFileByPath(path);
-  if (existing instanceof TFile) return existing;
+  const existing = app.vault.getFileByPath(path);
+  if (existing) return existing;
+  // No exact-path lookup can answer this: on a case-insensitive disk, creating would fail instead.
   const lower = path.toLowerCase();
   const match = app.vault.getMarkdownFiles().find((f) => f.path.toLowerCase() === lower);
   if (match) return match;
   const folder = path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "";
-  if (folder && !app.vault.getAbstractFileByPath(normalizePath(folder))) await app.vault.createFolder(folder);
-  return app.vault.create(path, fillTemplate(target.contentTemplate, vars));
+  if (folder && !app.vault.getFolderByPath(normalizePath(folder))) await app.vault.createFolder(folder);
+  return app.vault.create(path, fillNoteTemplate(target.contentTemplate, vars));
 }
 
 function isCtrl(evt: MouseEvent | KeyboardEvent): boolean {
   return evt.ctrlKey || evt.metaKey;
 }
 
-function openExternally(target: string): void {
-  window.open(target);
-}
-
-function openPdf(entry: BibEntry): void {
+async function openPdf(entry: BibEntry): Promise<void> {
   const pdf = entry.files.find((f) => f.toLowerCase().endsWith(".pdf"));
   if (!pdf) {
     new Notice("This reference has no PDF attached.");
     return;
   }
-  // Loaded when needed so nothing but this action depends on Electron.
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { shell } = require("electron") as { shell: { openPath(p: string): Promise<string> } };
-  void shell.openPath(pdf).then((err) => {
-    if (err) new Notice(`Couldn't open the PDF: ${err}`);
-  });
+  const error = await shell.openPath(pdf);
+  if (error) new Notice(`Couldn't open the PDF: ${error}`);
 }
 
 function reportFailure(what: string, e: unknown): void {
-  console.error(`Zotero Citations Sync: ${what}`, e);
+  console.error(`Scholar Buddy: ${what}`, e);
   new Notice(`${what}: ${(e as Error).message}`);
 }
 
-/** Registers the commands that replace the Citations plugin. */
-export function registerCitationCommands(plugin: ZoteroCitationsSyncPlugin): void {
+/** Registers the library search and citation commands. No default hotkeys, per Obsidian's guidelines. */
+export function registerCitationCommands(plugin: ScholarBuddyPlugin): void {
   const { app } = plugin;
 
   const search = async (options: ModalOptions): Promise<void> => {
     await plugin.library.refresh();
     const items = [...plugin.library.entries.values()];
     if (!items.length) {
-      new Notice(plugin.library.lastProblem ?? "No references found. Check the .bib file in this plugin's settings.", 8000);
+      new Notice(plugin.library.lastProblem ?? "No references found. Check the .bib file in this plugin's options.", 8000);
       return;
     }
     new CitationSearchModal(app, items, options).open();
   };
 
-  // While the Citations plugin is enabled it owns these hotkeys, and binding them twice would
-  // fire both plugins. They apply from the next load once it's turned off.
-  const citationsEnabled = (
-    app as unknown as { plugins?: { enabledPlugins?: Set<string> } }
-  ).plugins?.enabledPlugins?.has("obsidian-citation-plugin");
-  const hotkey = (key: string) => (citationsEnabled ? {} : { hotkeys: [{ modifiers: ["Mod", "Shift"] as Modifier[], key }] });
+  const openNote = async (entry: BibEntry, newPane: boolean): Promise<void> => {
+    try {
+      const file = await getOrCreateNote(plugin, entry);
+      await app.workspace.getLeaf(newPane).openFile(file);
+    } catch (e) {
+      reportFailure("Couldn't open the literature note", e);
+    }
+  };
+
+  const insertLink = async (entry: BibEntry, editor: Editor, sourcePath: string): Promise<void> => {
+    try {
+      const file = await getOrCreateNote(plugin, entry);
+      editor.replaceSelection(app.fileManager.generateMarkdownLink(file, sourcePath));
+    } catch (e) {
+      reportFailure("Couldn't create the literature note", e);
+    }
+  };
 
   plugin.addCommand({
     id: "open-literature-note",
     name: "Open literature note",
-    ...hotkey("o"),
     callback: () =>
       void search({
         instructions: [
@@ -149,13 +151,11 @@ export function registerCitationCommands(plugin: ZoteroCitationsSyncPlugin): voi
         ],
         choose: (entry, evt) => {
           if (evt instanceof KeyboardEvent && evt.key === "Tab") {
-            if (evt.shiftKey) openPdf(entry);
-            else openExternally(entry.zoteroSelectURI);
+            if (evt.shiftKey) void openPdf(entry);
+            else window.open(entry.zoteroSelectURI);
             return;
           }
-          getOrCreateNote(plugin, entry)
-            .then((file) => app.workspace.getLeaf(isCtrl(evt)).openFile(file))
-            .catch((e) => reportFailure("Couldn't open the literature note", e));
+          void openNote(entry, isCtrl(evt));
         },
       }),
   });
@@ -163,7 +163,6 @@ export function registerCitationCommands(plugin: ZoteroCitationsSyncPlugin): voi
   plugin.addCommand({
     id: "insert-note-link",
     name: "Insert literature note link",
-    ...hotkey("e"),
     editorCallback: (editor: Editor, ctx) =>
       void search({
         instructions: [
@@ -172,13 +171,7 @@ export function registerCitationCommands(plugin: ZoteroCitationsSyncPlugin): voi
           ["esc", "to dismiss"],
         ],
         keys: [],
-        choose: (entry) => {
-          getOrCreateNote(plugin, entry)
-            .then((file) => {
-              editor.replaceSelection(app.fileManager.generateMarkdownLink(file, ctx.file?.path ?? ""));
-            })
-            .catch((e) => reportFailure("Couldn't create the literature note", e));
-        },
+        choose: (entry) => void insertLink(entry, editor, ctx.file?.path ?? ""),
       }),
   });
 
@@ -194,7 +187,7 @@ export function registerCitationCommands(plugin: ZoteroCitationsSyncPlugin): voi
         ],
         keys: [],
         choose: (entry) => {
-          editor.replaceSelection(fillTemplate(plugin.noteTarget().contentTemplate, entryVars(entry)));
+          editor.replaceSelection(fillNoteTemplate(plugin.noteTarget().contentTemplate, entryVars(entry)));
         },
       }),
   });
@@ -221,14 +214,14 @@ export function registerCitationCommands(plugin: ZoteroCitationsSyncPlugin): voi
       }),
   });
 
+  const refresh = async (): Promise<void> => {
+    await plugin.library.refresh(true);
+    const { entries, lastProblem } = plugin.library;
+    new Notice(lastProblem ?? `Citation library: ${entries.size} references loaded.`, lastProblem ? 8000 : 4000);
+  };
   plugin.addCommand({
     id: "refresh-library",
     name: "Refresh citation library",
-    ...hotkey("r"),
-    callback: () =>
-      void plugin.library.refresh(true).then(() => {
-        const { entries, lastProblem } = plugin.library;
-        new Notice(lastProblem ?? `Citation library: ${entries.size} references loaded.`, lastProblem ? 8000 : 4000);
-      }),
+    callback: () => void refresh(),
   });
 }

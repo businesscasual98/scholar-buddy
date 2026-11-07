@@ -128,7 +128,7 @@ export class ZoteroClient {
     let res;
     try {
       res = await requestUrl({ url: this.base + path, headers: ALLOWED, throw: false });
-    } catch (e) {
+    } catch {
       throw new ZoteroUnavailableError("Zotero is not running or its HTTP server is off.");
     }
     if (res.status === 403) throw new LocalApiDisabledError("Zotero's local API is not enabled.");

@@ -1,5 +1,5 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
-import type ZoteroCitationsSyncPlugin from "./main";
+import type ScholarBuddyPlugin from "./main";
 
 export interface ZoteroSyncSettings {
   /** Port of Zotero's built-in HTTP server. */
@@ -70,7 +70,7 @@ export const DEFAULT_SETTINGS: ZoteroSyncSettings = {
 };
 
 export class ZoteroSyncSettingTab extends PluginSettingTab {
-  constructor(app: App, private plugin: ZoteroCitationsSyncPlugin) {
+  constructor(app: App, private plugin: ScholarBuddyPlugin) {
     super(app, plugin);
   }
 

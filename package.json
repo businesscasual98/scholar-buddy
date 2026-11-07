@@ -1,23 +1,32 @@
 {
-  "name": "zotero-citations-sync",
-  "version": "0.2.0",
+  "name": "scholar-buddy",
+  "version": "0.3.0",
   "description": "Search your Zotero library from Obsidian, insert citations, and keep literature notes in sync with your PDF annotations and notes.",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
     "install-local": "node scripts/install-local.mjs",
+    "lint": "eslint src",
     "test": "esbuild scripts/bib.test.ts --bundle --platform=node --log-level=warning --outfile=scripts/bib.test.js && node scripts/bib.test.js"
   },
-  "keywords": ["obsidian", "zotero", "citations", "annotations"],
+  "keywords": [
+    "obsidian",
+    "zotero",
+    "citations",
+    "annotations"
+  ],
   "author": "Avery",
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^22.0.0",
     "builtin-modules": "^4.0.0",
     "esbuild": "^0.24.0",
-    "obsidian": "latest",
+    "eslint": "^9.39.5",
+    "eslint-plugin-obsidianmd": "^0.5.1",
+    "obsidian": "1.13.1",
     "tslib": "^2.6.0",
-    "typescript": "^5.6.0"
+    "typescript": "^5.6.0",
+    "typescript-eslint": "^8.72.1"
   }
 }

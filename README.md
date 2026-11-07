@@ -1,8 +1,10 @@
-# Zotero Citations Sync
+# Scholar Buddy
 
-**Your Zotero highlights, in your Obsidian literature notes, automatically.**
+**Your Zotero library and highlights, in your Obsidian literature notes.**
 
-Highlight a PDF in Zotero → the quote appears in that paper's note in Obsidian, with a link that jumps back to the exact spot in the PDF. No export step, no templates to configure, and your own writing in the note is never touched.
+*Built and maintained by a poor UCLA PhD student for other scholars.*
+
+Highlight a PDF in Zotero → the quote appears in that paper's note in Obsidian, with a link that jumps back to the exact spot in the PDF. Your own writing in the note is never touched.
 
 It also searches your library and inserts citations, and can replace the [Citations](https://github.com/hans/obsidian-citation-plugin) plugin outright: it uses the same `@citekey` notes, folder and Better BibTeX citekeys, and copies your Citations settings the first time it runs.
 
@@ -13,8 +15,8 @@ title: On the relevance of ethnography for the production of public sociology an
 authors: Diane Vaughan
 year: 2005
 ---
-Mentions a [[Burawoy]] article introducing "back-translation" — think about   ← your notes,
-this in my role with the [[defense]] sector.                                   ← untouched
+Mentions a [[Burawoy]] article introducing "back-translation" — compare with  ← your notes,
+my [[methods]] reading.                                                        ← untouched
 
 %% zotero-sync:start %%
 ## Zotero annotations
@@ -37,7 +39,7 @@ this in my role with the [[defense]] sector.                                   �
 - **Kindle too** (optional). Point it at a copy of your Kindle's `My Clippings.txt` and highlights land in the same notes, in a `%% kindle-sync %%` block. Books are matched to Zotero items by title + author; books that aren't in Zotero still get a note named after the book so nothing is lost. See [Kindle](#kindle).
 - **Round-trips to the PDF.** Every highlight links to `zotero://open-pdf/…`, so clicking `p. 413` opens the PDF in Zotero scrolled to that highlight.
 - **Handles all annotation types.** Highlights and underlines become blockquotes (with your comment indented beneath), sticky notes become bullets, image/ink annotations get a placeholder link. Zotero child notes are included too (toggle in settings).
-- **Creates notes for un-noted papers** (optional). If you've annotated a paper but never made a literature note, one is created using your Citations content template.
+- **Creates notes for un-noted papers** (optional). If you've annotated a paper but never made a literature note, one is created from your new-note template.
 - **Stays quiet.** Nothing is written if nothing changed, so file-sync tools (Remotely Save, Obsidian Sync, git) don't see churn.
 
 ## Requirements
@@ -53,23 +55,33 @@ Desktop only (Zotero doesn't run on phones).
 
 ## Install
 
-**From the community plugin list** *(once published)*: Settings → Community plugins → Browse → "Zotero Citations Sync".
+**From the community plugin list** *(once published)*: Settings → Community plugins → Browse → "Scholar Buddy".
 
-**Manually**: download `main.js`, `manifest.json` and `styles.css` from the latest release into `<vault>/.obsidian/plugins/zotero-citations-sync/`, then enable the plugin in Settings → Community plugins.
+**Manually**: download `main.js`, `manifest.json` and `styles.css` from the [latest release](https://github.com/businesscasual98/scholar-buddy/releases/latest) into `<vault>/.obsidian/plugins/scholar-buddy/`, then enable the plugin in Settings → Community plugins.
 
 ## Citations
 
-| Command | Hotkey | In the search window |
-|---|---|---|
-| Open literature note | `Ctrl/Cmd+Shift+O` | `Enter` opens the note (creating it if needed), `Ctrl+Enter` opens it in a new pane, `Tab` shows the item in Zotero, `Shift+Tab` opens the PDF |
-| Insert literature note link | `Ctrl/Cmd+Shift+E` | `Enter` inserts a link, creating the note if needed |
-| Insert literature note content | | `Enter` inserts the new-note template, filled in for that reference |
-| Insert citation | | `Enter` inserts the citation format, `Shift+Enter` the secondary format |
-| Refresh citation library | `Ctrl/Cmd+Shift+R` | Reloads the `.bib` file; it also reloads by itself when the file changes |
+| Command | In the search window |
+|---|---|
+| Open literature note | `Enter` opens the note (creating it if needed), `Ctrl+Enter` opens it in a new pane, `Tab` shows the item in Zotero, `Shift+Tab` opens the PDF |
+| Insert literature note link | `Enter` inserts a link, creating the note if needed |
+| Insert literature note content | `Enter` inserts the new-note template, filled in for that reference |
+| Insert citation | `Enter` inserts the citation format, `Shift+Enter` the secondary format |
+| Refresh citation library | Reloads the `.bib` file; it also reloads by itself when the file changes |
 
-**Moving from the Citations plugin:** your existing notes and links keep working, because note names don't change. Your settings are copied on first run. While Citations stays enabled, the commands above have no hotkeys, so the two don't both fire. Once you turn it off and reload Obsidian, the hotkeys apply.
+The commands have no default hotkeys, so they can't clash with yours. Assign any you like in Settings → Hotkeys.
+
+**Moving from the Citations plugin:** your existing notes and links keep working, because note names don't change, and your settings are copied on first run. Citations used `Ctrl/Cmd+Shift+O`, `E` and `R`; to keep them, turn Citations off and assign them to Open literature note, Insert literature note link, and Refresh citation library.
 
 Templates support plain `{{variable}}` substitution, not the Handlebars helpers and `{{#if}}` blocks Citations allows. CSL-JSON exports aren't supported. Export BibLaTeX or BibTeX instead.
+
+## Network use and file access
+
+Scholar Buddy has no accounts, payments, ads or telemetry, and sends nothing over the internet.
+
+- **Network use:** it connects only to the Zotero app on your own computer (`127.0.0.1`, port 23119 by default), using Zotero's local API and Better BibTeX's local endpoint. It needs this to read your annotations, notes and citekeys. Nothing leaves your machine.
+- **Files outside your vault:** it reads your `.bib` export from outside the vault only if you set an absolute path to one, and `Shift+Tab` in the search window asks your system to open a PDF wherever Zotero stores it, which is usually outside the vault. It needs these so the export can stay where you keep it, and so you can reach the PDF from Obsidian.
+- **Links:** `Tab` in the search window, and the links in synced annotations, open the Zotero app through `zotero://` links.
 
 ## Settings
 
@@ -98,7 +110,7 @@ Kindle has no API, so the plugin reads the `My Clippings.txt` file every Kindle 
 2. Settings → Kindle → turn on **Sync Kindle highlights**; the path defaults to `My Clippings.txt`.
 3. That's it. The plugin syncs on startup and whenever that file changes — so next time, just overwrite the copy with a fresh one.
 
-**Matching.** Each book is looked up in Zotero via Better BibTeX (title, then the author's surname has to appear on the item). A clean single hit is cached; anything ambiguous is left unmatched and its highlights go to a note named after the book (`Braiding Sweetgrass.md`, with `source: kindle` in the frontmatter). When you later add the book to Zotero, add a line to **Book → citekey overrides** — the settings page lists every unmatched title ready to paste — and the next sync moves the block into `@citekey.md`. (The old title-named note isn't deleted; merge or trash it yourself.)
+**Matching.** Each book is looked up in Zotero via Better BibTeX (title, then the author's surname has to appear on the item). A clean single hit is cached; anything ambiguous is left unmatched and its highlights go to a note named after the book (`Braiding Sweetgrass.md`, with `source: kindle` in the frontmatter). When you later add the book to Zotero, add a line to **Book → citekey overrides** — the settings page lists every unmatched title ready to paste — and the next sync moves the block into `@citekey.md`. The old title-named note goes to the trash if it holds nothing but the synced block; if you wrote anything else in it, it's kept for you to merge.
 
 **Dedupe.** Kindle keeps the old entry when you extend a highlight; overlapping highlights collapse to the longest one. Notes typed on a highlight are shown beneath it (`↳`), like Zotero comments.
 
@@ -123,7 +135,7 @@ Better BibTeX hasn't assigned it one yet (or BBT isn't installed). Open the item
 Not yet — the personal library only. Open an issue if you need this.
 
 **How is this different from ZotLit / Zotero Integration?**
-Those are powerful, template-driven importers that own the notes they create. This plugin does one thing: keep the annotation section of your *existing* Citations notes current, automatically. If you already live in Citations and just want your highlights to show up, this is the lighter tool.
+Those are powerful, template-driven importers that own the notes they create. Scholar Buddy keeps the annotation section of your *existing* notes current automatically, and adds a simple search and citation workflow. If you came from Citations and want your highlights to show up, this is the lighter tool.
 
 ## Development
 
@@ -131,8 +143,14 @@ Those are powerful, template-driven importers that own the notes they create. Th
 npm install
 npm run dev            # rebuild on change
 npm run build          # type-check + production bundle
+npm run lint           # Obsidian's review rules
+npm test               # .bib reader and template tests
 npm run install-local -- "C:\path\to\vault"   # copy into a vault for testing
 ```
+
+## Credits
+
+The search and citation commands follow the workflow of [Citations](https://github.com/hans/obsidian-citation-plugin) by Jon Gauthier. Sentence-casing logic is adapted from [`@retorquere/bibtex-parser`](https://github.com/retorquere/bibtex-parser). See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). Scholar Buddy isn't affiliated with Zotero, Better BibTeX, Amazon or Obsidian.
 
 ## License
 

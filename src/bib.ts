@@ -31,8 +31,6 @@ export interface BibParseResult {
   errors: string[];
 }
 
-/** Fields whose values are literal strings: never run these through LaTeX decoding. */
-const VERBATIM = new Set(["url", "doi", "eprint", "file", "files", "urlraw", "verba", "verbb", "verbc"]);
 const NON_ENTRIES = new Set(["comment", "preamble", "string"]);
 const BS = "\\";
 
@@ -215,9 +213,10 @@ function keepsCase(word: string): boolean {
 }
 
 /**
- * Title Case → Sentence case, keeping `{protected}` text. Follows the rules of the parser in the
- * Citations plugin, so new literature notes read like the ones it already created. Better BibTeX
- * brace-protects proper nouns, which is what makes this safe.
+ * Title Case → Sentence case, keeping `{protected}` text. Better BibTeX brace-protects proper
+ * nouns, which is what makes this safe. The rules here and in keepsCase are adapted from
+ * @retorquere/bibtex-parser, used under its MIT license (see THIRD-PARTY-NOTICES.md), so new notes
+ * read like ones made by the Citations plugin, which uses that parser.
  */
 export function sentenceCase(raw: string): string {
   // Split into runs, tracking which ones were brace-protected. A brace after \command is its
@@ -442,7 +441,7 @@ function finishText(s: string): string {
   return s
     .replace(/---/g, "—")
     .replace(/--/g, "–")
-    .replace(/[ \t ]+/g, " ")
+    .replace(/[ \t\u00a0]+/g, " ")
     .replace(/ ?\n ?/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();

@@ -8,7 +8,7 @@ if (!vault || !existsSync(join(vault, ".obsidian"))) {
   console.error("usage: node scripts/install-local.mjs <vault path>");
   process.exit(1);
 }
-const dest = join(vault, ".obsidian", "plugins", "zotero-citations-sync");
+const dest = join(vault, ".obsidian", "plugins", "scholar-buddy");
 mkdirSync(dest, { recursive: true });
 for (const f of ["main.js", "manifest.json", "styles.css"]) cpSync(f, join(dest, f));
 console.log("installed to", dest);

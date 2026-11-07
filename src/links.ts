@@ -83,7 +83,7 @@ const WORD_CHAR = /[\p{L}\p{N}]/u;
  */
 function findOutsideLinks(hay: string, needle: string, from: number): number {
   const spans: [number, number][] = [];
-  for (const m of hay.matchAll(LINK_RE)) spans.push([m.index as number, (m.index as number) + m[0].length]);
+  for (const m of hay.matchAll(LINK_RE)) spans.push([m.index, (m.index) + m[0].length]);
   let i = hay.indexOf(needle, from);
   while (i >= 0) {
     const end = i + needle.length;

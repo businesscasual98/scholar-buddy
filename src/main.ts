@@ -10,7 +10,7 @@ const FALLBACK_CONTENT_TEMPLATE =
 
 type Reason = "manual" | "startup" | "poll" | "file";
 
-export default class ZoteroCitationsSyncPlugin extends Plugin {
+export default class ScholarBuddyPlugin extends Plugin {
   settings: ZoteroSyncSettings = DEFAULT_SETTINGS;
   library: BibLibrary = new BibLibrary(this.app, () => this.bibPath());
 
@@ -29,7 +29,7 @@ export default class ZoteroCitationsSyncPlugin extends Plugin {
     const reloadLibrary = debounce(() => void this.library.refresh(), 1000, true);
     this.registerEvent(
       this.app.vault.on("modify", (f: TAbstractFile) => {
-        if (f.path === normalizePath(this.bibPath())) reloadLibrary();
+        if (f.path.endsWith(".bib") && f.path === normalizePath(this.bibPath())) reloadLibrary();
       })
     );
 
@@ -105,7 +105,7 @@ export default class ZoteroCitationsSyncPlugin extends Plugin {
       } else if (e instanceof ZoteroUnavailableError) {
         if (reason === "manual") new Notice("Zotero doesn't seem to be running.");
       } else {
-        console.error("Zotero Citations Sync failed", e);
+        console.error("Scholar Buddy failed", e);
         new Notice(`Zotero sync failed: ${(e as Error).message}`);
       }
     } finally {
@@ -208,7 +208,7 @@ export default class ZoteroCitationsSyncPlugin extends Plugin {
       s.citationsImported = true;
       await this.saveSettings();
     } catch (e) {
-      console.warn("Zotero Citations Sync: could not read Citations plugin settings", e);
+      console.error("Scholar Buddy: could not read Citations plugin settings", e);
     }
   }
 
@@ -217,7 +217,7 @@ export default class ZoteroCitationsSyncPlugin extends Plugin {
   }
 
   async loadSettings(): Promise<void> {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, (await this.loadData()) as Partial<ZoteroSyncSettings>);
   }
 
   async saveSettings(): Promise<void> {
