@@ -172,7 +172,7 @@ export class ZoteroSyncSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName(".bib file")
-      .setDesc("Your Better BibTeX export, with \"Keep updated\" on. Leave empty to use the vault's only .bib file.")
+      .setDesc("Your Better BibTeX export, with \"Keep updated\" on. Leave empty to use the only .bib file at the top of your vault.")
       .addText((t) =>
         t
           .setPlaceholder("Library.bib")

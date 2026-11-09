@@ -71,12 +71,14 @@ export async function getOrCreateNote(plugin: ScholarBuddyPlugin, entry: BibEntr
   const path = notePath(target, fillTemplate(target.titleTemplate, vars));
   const existing = app.vault.getFileByPath(path);
   if (existing) return existing;
-  // No exact-path lookup can answer this: on a case-insensitive disk, creating would fail instead.
-  const lower = path.toLowerCase();
-  const match = app.vault.getMarkdownFiles().find((f) => f.path.toLowerCase() === lower);
-  if (match) return match;
+  // A note whose name differs only in letter case is the same file on Windows and macOS, so
+  // creating would fail. Look for one in the note's own folder, not the whole vault.
   const folder = path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "";
-  if (folder && !app.vault.getFolderByPath(normalizePath(folder))) await app.vault.createFolder(folder);
+  const parent = folder ? app.vault.getFolderByPath(normalizePath(folder)) : app.vault.getRoot();
+  const lower = path.toLowerCase();
+  const match = parent?.children.find((f): f is TFile => f instanceof TFile && f.path.toLowerCase() === lower);
+  if (match) return match;
+  if (folder && !parent) await app.vault.createFolder(folder);
   return app.vault.create(path, fillNoteTemplate(target.contentTemplate, vars));
 }
 

@@ -181,10 +181,10 @@ export default class ScholarBuddyPlugin extends Plugin {
     };
   }
 
-  /** The configured .bib file, or the vault's only .bib file if none is set. */
+  /** The configured .bib file, or the only .bib file at the top of the vault if none is set. */
   bibPath(): string {
     if (this.settings.bibPath) return this.settings.bibPath;
-    const found = this.app.vault.getFiles().filter((f) => f.extension === "bib");
+    const found = this.app.vault.getRoot().children.filter((f) => f instanceof TFile && f.extension === "bib");
     return found.length === 1 ? found[0].path : "";
   }
 

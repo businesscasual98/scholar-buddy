@@ -1,7 +1,7 @@
 {
   "id": "scholar-buddy",
   "name": "Scholar Buddy",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "minAppVersion": "1.15.0",
   "description": "Search your Zotero library, insert citations, and sync PDF highlights, notes, and Kindle clippings into your literature notes.",
   "author": "Avery",

@@ -1,6 +1,6 @@
 {
   "name": "scholar-buddy",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Search your Zotero library from Obsidian, insert citations, and keep literature notes in sync with your PDF annotations and notes.",
   "main": "main.js",
   "scripts": {
@@ -20,7 +20,6 @@
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^22.0.0",
-    "builtin-modules": "^4.0.0",
     "esbuild": "^0.24.0",
     "eslint": "^9.39.5",
     "eslint-plugin-obsidianmd": "^0.5.1",
